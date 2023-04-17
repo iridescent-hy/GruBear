@@ -1,0 +1,738 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- namespace : xml파일이 여러개일 수 있으므로 이를 구별하기 위한 식별 용도로 사용 -->
+<mapper namespace="kr.or.ddit.mapper.EdocMapper">
+
+	<sql id="Search">
+		<if test="searchType != null and searchType == 'edocTtl'">
+			AND (EDOC_TTL LIKE '%'||#{searchWord}||'%')
+		</if>
+		<if test="searchType != null and searchType == 'empNm'">
+			AND (EMP_NM LIKE '%'||#{searchWord}||'%')
+		</if>
+	</sql>
+
+	<resultMap type="atrzLineInfoVO" id="atrzLineInfoMap">
+		<result property="atrzLineInfoNo" column="ATRZ_LINE_INFO_NO"></result>
+		<result property="atrzLineInfoClsf" column="ATRZ_LINE_INFO_CLSF"></result>
+		<result property="edocVO.edocNo" column="EDOC_NO"></result>
+		<result property="edocVO.empNo" column="EMP_NO"></result>
+		<result property="edocVO.edocTtl" column="EDOC_TTL"></result>
+		<result property="edocVO.edocDt" column="EDOC_DT"></result>
+		<result property="edocVO.edocFormClsf" column="EDOC_FORM_CLSF"></result>
+		<result property="edocVO.fileGroupNo" column="FILE_GROUP_NO"></result>
+		<result property="edocVO.atrzLineInfoNo" column="ATRZ_LINE_INFO_NO"></result>
+		<result property="edocVO.holiVO.holiBgngYmd" column="HOLI_BGNG_YMD"></result>
+		<result property="edocVO.holiVO.holiEndYmd" column="HOLI_END_YMD"></result>
+		<result property="edocVO.holiVO.holiAplyCnt" column="HOLI_APLY_CNT"></result>
+		<result property="edocVO.holiVO.holiCn" column="HOLI_CN"></result>
+		<result property="edocVO.holiVO.holiClsf" column="HOLI_CLSF"></result>
+		<result property="edocVO.dfrtVO.drftCn" column="DRFT_CN"></result>
+		<result property="edocVO.slsReportVO.edocNo" column="EDOC_NO"></result>
+		<result property="edocVO.slsReportVO.slsCtrtNm" column="SLS_CTRT_NM"></result>
+		<result property="edocVO.slsReportVO.slsCnpt" column="SLS_CNPT"></result>
+		<result property="edocVO.slsReportVO.slsCorpNo" column="SLS_CORP_NO"></result>
+		<result property="edocVO.slsReportVO.slsYmd" column="SLS_YMD"></result>
+		<result property="edocVO.slsReportVO.subCd" column="SUB_CD"></result>
+		<result property="edocVO.slsReportVO.slsExt" column="SLS_EXT"></result>
+		<result property="edocVO.slsReportVO.totalSlsAmt" column="TOTAL_SLS_AMT"></result>
+		<result property="edocVO.fileGrVO.fileGroupNo" column="FILE_GROUP_NO"></result>
+		<collection property="atrzVOList" resultMap="atrzMap"></collection>
+		<collection property="atrzRfrncVOList" resultMap="atrzRfrncMap"></collection>
+		<collection property="edocVO.fileGrVO.filesList" resultMap="fileMap"></collection>
+		<collection property="edocVO.slsReportVO.slsInfoVOList" resultMap="slsInfoMap"></collection>
+	</resultMap>
+
+	<resultMap type="atrzVO" id="atrzMap">
+		<result property="atrzSeq" column="ATRZ_SEQ"></result>
+		<result property="atrzLineInfoNo" column="ATRZ_LINE_INFO_NO"></result>
+		<result property="empNo" column="EMP_NO"></result>
+		<result property="empNoAtrz" column="EMP_NO_ATRZ"></result>
+		<result property="atrzYn" column="ATRZ_YN"></result>
+		<result property="atrzDt" column="ATRZ_DT"></result>
+		<result property="atrzRjctRsn" column="ATRZ_RJCT_RSN"></result>
+	</resultMap>
+
+	<resultMap type="atrzRfrncVO" id="atrzRfrncMap">
+		<result property="atrzRfrncNo" column="ATRZ_RFRNC_NO"></result>
+		<result property="empNo" column="EMP_NO"></result>
+		<result property="atrzLineInfoNo" column="ATRZ_LINE_INFO_NO"></result>
+		<result property="atrzRfrncRcptnDt" column="ATRZ_RFRNC_RCPTN_DT"></result>
+	</resultMap>
+
+	<resultMap type="fileVO" id="fileMap">
+		<result property="fileNo" column="FILE_NO"></result>
+		<result property="fileGroupNo" column="FILE_GROUP_NO"></result>
+		<result property="fileOrgnlNm" column="FILE_ORGNL_NM"></result>
+		<result property="fileStrgNm" column="FILE_STRG_NM"></result>
+		<result property="fileStrgAddr" column="FILE_STRG_ADDR"></result>
+		<result property="fileSz" column="FILE_SZ"></result>
+		<result property="fileThumb" column="FILE_THUMB"></result>
+		<result property="fileType" column="FILE_TYPE"></result>
+	</resultMap>
+
+	<resultMap type="slsInfoVO" id="slsInfoMap">
+		<result property="slsNo" column="SLS_NO" ></result>
+		<result property="edocNo" column="EDOC_NO" ></result>
+		<result property="slsGds" column="SLS_GDS" ></result>
+		<result property="slsQuantity" column="SLS_QUANTITY" ></result>
+		<result property="slsAmt" column="SLS_AMT" ></result>
+	</resultMap>
+
+
+	<select id="getCtrHoly" parameterType="empVO" resultType="int">
+		SELECT
+		EMP_CRT_HOLI
+		FROM EMP
+		WHERE EMP_NO= #{empNo}
+	</select>
+
+
+<!-- 결재할문서 -->
+ 	<select id="getApproveTotal" parameterType="pagingVO" resultType="int">
+SELECT COUNT(*)
+FROM (
+    WITH T AS(
+        SELECT ATRZ_SEQ, ATRZ_LINE_INFO_NO, EMP_NO, ATRZ_YN, ATRZ_DT, ATRZ_RJCT_RSN
+        FROM   (SELECT * FROM ATRZ WHERE ATRZ_YN IS NULL) A
+        WHERE  A.ATRZ_SEQ = (
+                    SELECT MIN(B.ATRZ_SEQ)
+                    FROM   (SELECT * FROM ATRZ WHERE ATRZ_YN IS NULL) B
+                    WHERE  B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+                )
+    )
+    SELECT T.ATRZ_SEQ, T.ATRZ_LINE_INFO_NO, T.EMP_NO, T.ATRZ_YN, T.ATRZ_DT, T.ATRZ_RJCT_RSN
+         , (
+            SELECT X.ATRZ_DT
+            FROM (SELECT * FROM ATRZ WHERE ATRZ_YN IS NOT NULL) X
+            WHERE X.ATRZ_LINE_INFO_NO = T.ATRZ_LINE_INFO_NO
+            AND   X.ATRZ_SEQ = (
+                        SELECT MAX(Y.ATRZ_SEQ)
+                        FROM   (SELECT * FROM ATRZ WHERE ATRZ_YN IS NOT NULL) Y
+                        WHERE  Y.ATRZ_LINE_INFO_NO = X.ATRZ_LINE_INFO_NO
+                    )
+         ) ATRZ_RECEIPT_DT
+         , U.EDOC_TTL
+         , U.EDOC_NO
+         , (
+            SELECT FN_GET_EMP_NM(Z.EMP_NO) FROM ATRZ Z WHERE Z.ATRZ_LINE_INFO_NO = T.ATRZ_LINE_INFO_NO AND Z.ATRZ_SEQ = 1
+         ) EMP_INIT_NO
+         ,(
+          SELECT FN_GET_DEPT_NM(Z.EMP_NO) FROM ATRZ Z WHERE Z.ATRZ_LINE_INFO_NO = T.ATRZ_LINE_INFO_NO AND Z.ATRZ_SEQ = 1
+         ) EMP_INIT_NM
+         , X.EMP_NO AS EMP_NM
+         , FN_GET_DEPT_NM(T.EMP_NO) DEPT_NM
+    FROM   T, EDOC U, EMP X
+    WHERE  T.ATRZ_LINE_INFO_NO = U.ATRZ_LINE_INFO_NO
+    AND    T.EMP_NO = #{empNo}
+     		AND U.EDOC_LAST_ATRZ_YN = 'N'
+     		AND U.EMP_NO = X.EMP_NO
+    			<include refid="Search" />
+)
+	</select>
+
+
+	<select id="getApprove" parameterType="pagingVO" resultType="hashMap">
+			 WITH T AS(
+	    SELECT ATRZ_SEQ, ATRZ_LINE_INFO_NO, EMP_NO, ATRZ_YN, ATRZ_DT, ATRZ_RJCT_RSN
+	    FROM   (SELECT * FROM ATRZ WHERE ATRZ_YN IS NULL) A
+	    WHERE  A.ATRZ_SEQ = (
+	                SELECT MIN(B.ATRZ_SEQ)
+	                FROM   (SELECT * FROM ATRZ WHERE ATRZ_YN IS NULL) B
+	                WHERE  B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+	            )
+	)
+    SELECT B.*
+    FROM(SELECT
+        A.*,ROW_NUMBER() OVER (ORDER BY A.ATRZ_LINE_INFO_NO DESC) RNUM
+         FROM(SELECT T.ATRZ_SEQ, T.ATRZ_LINE_INFO_NO, T.EMP_NO, T.ATRZ_YN, T.ATRZ_DT, T.ATRZ_RJCT_RSN
+	     , (
+	        SELECT TO_CHAR(X.ATRZ_DT, 'yyyy-MM-dd hh24:mi')
+	        FROM (SELECT * FROM ATRZ WHERE ATRZ_YN IS NOT NULL) X
+	        WHERE X.ATRZ_LINE_INFO_NO = T.ATRZ_LINE_INFO_NO
+	        AND   X.ATRZ_SEQ = (
+	                    SELECT MAX(Y.ATRZ_SEQ)
+	                    FROM   (SELECT * FROM ATRZ WHERE ATRZ_YN IS NOT NULL) Y
+	                    WHERE  Y.ATRZ_LINE_INFO_NO = X.ATRZ_LINE_INFO_NO
+	                )
+	     ) ATRZ_RECEIPT_DT
+	     , U.EDOC_TTL
+	     , U.EDOC_NO
+	     ,U.EDOC_FORM_CLSF
+	     , (
+	        SELECT FN_GET_EMP_NM(Z.EMP_NO) FROM ATRZ Z WHERE Z.ATRZ_LINE_INFO_NO = T.ATRZ_LINE_INFO_NO AND Z.ATRZ_SEQ = 1
+	     ) EMP_INIT_NO
+	     ,(
+	      SELECT FN_GET_DEPT_NM(Z.EMP_NO) FROM ATRZ Z WHERE Z.ATRZ_LINE_INFO_NO = T.ATRZ_LINE_INFO_NO AND Z.ATRZ_SEQ = 1
+	     ) EMP_INIT_NM
+	     , X.EMP_NM AS EMP_NM
+	     , FN_GET_DEPT_NM(T.EMP_NO) DEPT_NM
+	FROM   T, EDOC U, EMP X
+	WHERE  T.ATRZ_LINE_INFO_NO = U.ATRZ_LINE_INFO_NO
+	AND    T.EMP_NO = #{empNo}
+			AND U.EDOC_LAST_ATRZ_YN = 'N'
+			AND U.EMP_NO = X.EMP_NO
+			<include refid="Search" />
+			) A
+    	) B
+    		<![CDATA[
+     	WHERE B.RNUM >= #{startRow} AND B.RNUM <= #{endRow}
+     			]]>
+	</select>
+
+
+	<select id="getAtrz" parameterType="String" resultType="hashMap">
+		SELECT B.ATRZ_SEQ, B.EMP_NO, C.EMP_NM, D.JBPS_NM , E.DEPT_NM, B.ATRZ_YN, TO_CHAR(B.ATRZ_DT,'yyyy-MM-dd hh24:mi') ATRZ_DT
+		FROM EDOC A, ATRZ B, EMP C, JBPS D, DEPT E
+		WHERE A.ATRZ_LINE_INFO_NO = B.ATRZ_LINE_INFO_NO
+		    AND B.EMP_NO = C.EMP_NO
+		    AND C.JBPS_NO = D.JBPS_NO
+		    AND C.DEPT_NO = E.DEPT_NO
+		    AND A.EDOC_NO = #{edocNo}
+		    ORDER BY B.ATRZ_SEQ
+	</select>
+
+	<select id="getAtrzRfrnc" parameterType="String" resultType="hashMap">
+	SELECT B.ATRZ_RFRNC_NO, C.EMP_NM, D.JBPS_NM, E.DEPT_NM
+		FROM EDOC A, ATRZ_RFRNC B, EMP C, JBPS D, DEPT E
+		WHERE A.EDOC_NO = #{edocNo} AND
+	      B.ATRZ_LINE_INFO_NO = A. ATRZ_LINE_INFO_NO AND
+	      B.EMP_NO = C.EMP_NO AND
+	      C.JBPS_NO = D.JBPS_NO AND
+	      C.DEPT_NO = E.DEPT_NO
+	</select>
+
+
+	<!-- 결재선번호 INSERT -->
+	<insert id="createAtrzLineInfoNo" parameterType="atrzLineInfoVO">
+		<selectKey resultType="String" order="BEFORE" keyProperty="atrzLineInfoNo">
+			SELECT NVL(SUBSTR(MAX(ATRZ_LINE_INFO_NO),1,4),'ATRZ')
+		    || TRIM(TO_CHAR(NVL(SUBSTR(MAX(ATRZ_LINE_INFO_NO),5),0)+1,'000'))
+			FROM ATRZ
+		</selectKey>
+		INSERT INTO ATRZ_LINE_INFO(ATRZ_LINE_INFO_NO,ATRZ_LINE_INFO_CLSF)
+		VALUES (#{atrzLineInfoNo},'즉시')
+	</insert>
+
+ 	<!-- 결재선추가 INSERT  -->
+		<insert id="createAtrzLine" parameterType="java.util.List">
+			<foreach collection="list" item="item" index="index" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+			<if test = "index==0" >
+			INTO ATRZ(ATRZ_SEQ, ATRZ_LINE_INFO_NO, EMP_NO, ATRZ_YN, ATRZ_DT, ATRZ_RJCT_RSN)
+			VALUES( #{index}+1, #{item.atrzLineInfoNo},#{item.empNo},'Y',SYSDATE,NULL)
+			</if>
+			<if test = "index!=0">
+			INTO ATRZ(ATRZ_SEQ, ATRZ_LINE_INFO_NO, EMP_NO, ATRZ_YN, ATRZ_DT, ATRZ_RJCT_RSN)
+			VALUES( #{index}+1, #{item.atrzLineInfoNo},#{item.empNo},NULL,NULL,NULL)
+			</if>
+			</foreach>
+		</insert>
+
+
+		<!-- 참조자 추가 INSERT -->
+		<insert id="createAtrzRfrnc" parameterType="java.util.List">
+		<foreach collection="list" item="item" index="index" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+		    INTO ATRZ_RFRNC(ATRZ_RFRNC_NO, EMP_NO, ATRZ_LINE_INFO_NO, ATRZ_RFRNC_RCPTN_DT,ATRZ_RFRNC_YN)
+            VALUES ( #{index}+1, #{item.empNo},#{item.atrzLineInfoNo},SYSDATE,'N')
+		</foreach>
+		</insert>
+
+
+  	<!-- 전자문서공통 INSERT -->
+	<insert id="createEdoc" parameterType="atrzLineInfoVO">
+	<selectKey resultType="String" order="BEFORE" keyProperty="edocVO.edocNo" >
+			SELECT NVL(SUBSTR(MAX(EDOC_NO),1,4),'EDOC')
+		    || TRIM(TO_CHAR(NVL(SUBSTR(MAX(EDOC_NO),5),0)+1,'000'))
+			FROM EDOC
+	</selectKey>
+	INSERT INTO EDOC(EDOC_NO, EMP_NO, EDOC_REF_NO, ATRZ_LINE_INFO_NO, FILE_GROUP_NO, EDOC_TTL, EDOC_DT, EDOC_LAST_ATRZ_YN, EDOC_FORM_CLSF)
+	VALUES (#{edocVO.edocNo},#{edocVO.empNo},NULL,#{atrzLineInfoNo},#{edocVO.fileGroupNo},#{edocVO.edocTtl},SYSDATE,'N',#{edocVO.edocFormClsf})
+ 	</insert>
+
+
+ 	 <!-- 휴가기안서 INSERT -->
+	<insert id="createHoli" parameterType="atrzLineInfoVO">
+	INSERT INTO HOLI(EDOC_NO, EMP_NO, HOLI_BGNG_YMD, HOLI_END_YMD, HOLI_APLY_CNT, HOLI_CN, HOLI_CLSF)
+	VALUES (#{edocVO.edocNo},#{edocVO.holiVO.empNo},#{edocVO.holiVO.holiBgngYmd},#{edocVO.holiVO.holiEndYmd},
+			#{edocVO.holiVO.holiAplyCnt},#{edocVO.holiVO.holiCn},#{edocVO.holiVO.holiClsf})
+	</insert>
+
+
+
+	<!-- 일반기안서 INSERT -->
+	<insert id="createDrft" parameterType="atrzLineInfoVO">
+	INSERT INTO DRFT(EDOC_NO, DRFT_CN)
+	VALUES(#{edocVO.edocNo},#{edocVO.dfrtVO.drftCn})
+	</insert>
+
+
+	<!-- 휴가기안서 detail가져오기 -->
+	<select id="holiDetail" parameterType="atrzLineInfoVO" resultMap="atrzLineInfoMap">
+		SELECT A.EDOC_NO, A.ATRZ_LINE_INFO_NO, A.EMP_NO, A.EDOC_TTL, A.FILE_GROUP_NO, A.EDOC_DT,
+		A.EDOC_FORM_CLSF, B.HOLI_BGNG_YMD, B.HOLI_END_YMD, B.HOLI_APLY_CNT,
+		       B.HOLI_CN, B.HOLI_CLSF, C.ATRZ_SEQ, C.EMP_NO AS EMP_NO_ATRZ, C.ATRZ_YN, C.ATRZ_DT, C.ATRZ_RJCT_RSN,
+		       D.ATRZ_RFRNC_NO, D.EMP_NO, E.FILE_GROUP_NO, F.FILE_NO, F.FILE_STRG_NM, F.FILE_ORGNL_NM,  F.FILE_THUMB, F.FILE_TYPE
+		FROM EDOC A, HOLI B , ATRZ C, ATRZ_RFRNC D, FILE_GR E, FILES F
+		WHERE B.EDOC_NO = A.EDOC_NO AND
+		    A. EDOC_NO = #{edocVO.edocNo}  AND
+		     C. ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO AND
+		     D. ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO AND
+		     E.FILE_GROUP_NO = A.FILE_GROUP_NO AND
+		     F.FILE_GROUP_NO = E.FILE_GROUP_NO
+	</select>
+
+
+	<select id="drftDetail" parameterType="atrzLineInfoVO" resultMap="atrzLineInfoMap">
+			SELECT A.EDOC_NO, A.ATRZ_LINE_INFO_NO, A.EMP_NO, A.EDOC_TTL, A.FILE_GROUP_NO, A.EDOC_DT, A.EDOC_FORM_CLSF, B.DRFT_CN,
+        C.ATRZ_SEQ, C.EMP_NO AS EMP_NO_ATRZ, C.ATRZ_YN, C.ATRZ_DT, C.ATRZ_RJCT_RSN,
+		       D.ATRZ_RFRNC_NO, D.EMP_NO, E.FILE_GROUP_NO, F.FILE_NO, F.FILE_STRG_NM, F.FILE_ORGNL_NM,  F.FILE_THUMB, F.FILE_TYPE
+		FROM EDOC A, DRFT B , ATRZ C, ATRZ_RFRNC D, FILE_GR E, FILES F
+		WHERE B.EDOC_NO = A.EDOC_NO AND
+		    A. EDOC_NO = #{edocVO.edocNo}  AND
+		     C. ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO AND
+		     D. ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO AND
+		     E.FILE_GROUP_NO = A.FILE_GROUP_NO AND
+		     F.FILE_GROUP_NO = E.FILE_GROUP_NO
+	</select>
+
+	<select id="getEmpInfo" parameterType="atrzLineInfoVO" resultType="hashMap">
+         SELECT B.EMP_NM, C.JBPS_NM, D.DEPT_NM
+         FROM EDOC A, EMP B, JBPS C, DEPT D
+         WHERE A.EDOC_NO = #{edocVO.edocNo} AND
+               B.EMP_NO = A.EMP_NO AND
+               B.JBPS_NO = C.JBPS_NO AND
+               B.DEPT_NO = D.DEPT_NO
+	</select>
+
+
+	<!-- 결재승인 -->
+	<update id="updateAtrz" parameterType="hashMap">
+		UPDATE ATRZ
+		SET    ATRZ_YN = 'Y'
+		     , ATRZ_DT = SYSDATE
+		     , EDOC_LAST_ATRZ_YN = (
+						    	SELECT CASE WHEN ATRZ_SEQ = (SELECT MAX(ATRZ_SEQ)
+													    	FROM   ATRZ
+													    	WHERE  ATRZ_LINE_INFO_NO = #{lineInfoNo}) THEN 'Y' ELSE '' END FROM ATRZ
+								WHERE  ATRZ_LINE_INFO_NO = #{lineInfoNo} AND EMP_NO = #{empNo}
+						    )
+		WHERE ATRZ_LINE_INFO_NO = #{lineInfoNo} AND EMP_NO = #{empNo}
+	</update>
+
+
+
+
+
+	<!-- 결재진행문서 TOTAL -->
+	<select id="getApprovedTotal" parameterType="pagingVO" resultType="int">
+	SELECT COUNT(*)
+    FROM(SELECT A.*,B.*
+    FROM EDOC A, ATRZ B, EMP X
+    WHERE B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+   		 AND B.EMP_NO IN(#{empNo})
+         AND A.EDOC_LAST_ATRZ_YN = 'N'
+         AND A.EMP_NO = X.EMP_NO
+         <include refid="Search" />
+         ORDER BY A.EDOC_DT DESC
+         )
+	</select>
+
+	<!-- 결재진행문서 -->
+	<select id="getApproved" parameterType="pagingVO" resultType="hashMap">
+	    SELECT Z.*
+      FROM
+        (SELECT ROWNUM AS RNUM, T.*
+           FROM (
+        SELECT
+            A.EDOC_NO, A.EDOC_TTL, TO_CHAR(A.EDOC_DT, 'yyyy-MM-dd') EDOC_DT, A.EDOC_FORM_CLSF,
+            X.EMP_NM AS EMP_NM,
+            FN_GET_DEPT_NM(A.EMP_NO) DEPT_NM
+        FROM EDOC A, ATRZ B, EMP X
+        WHERE B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+            AND B.EMP_NO IN (#{empNo})
+            AND A.EDOC_LAST_ATRZ_YN = 'N'
+            AND A.EMP_NO = X.EMP_NO
+            <include refid="Search" />
+        ORDER BY A.EDOC_DT DESC
+    ) T
+) Z
+    		<![CDATA[
+WHERE Z.RNUM >= #{startRow} AND Z.RNUM <= #{endRow}
+     			]]>
+	</select>
+
+	<!-- 참조문서함 -->
+	<select id="getAtrzRfrncTotal" parameterType="pagingVO" resultType="int">
+	SELECT COUNT(*)
+		FROM(
+		SELECT A.*,B.*
+		FROM ATRZ_RFRNC A, EDOC B, EMP X
+		WHERE A.EMP_NO = #{empNo}
+		    AND B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+		    AND A.ATRZ_RFRNC_YN = 'N'
+		    AND B.EMP_NO = X.EMP_NO
+		    <include refid="Search" />
+		    ORDER BY B.EDOC_DT DESC
+		)
+	</select>
+
+	<select id="getAtrzRfrncBox" parameterType="pagingVO" resultType="hashMap">
+	             	         SELECT Z.*
+         FROM(SELECT ROWNUM AS RNUM, T.*
+                 FROM (SELECT A.ATRZ_RFRNC_NO, TO_CHAR(A.ATRZ_RFRNC_RCPTN_DT, 'yyyy-MM-dd hh24:mi') ATRZ_RFRNC_RCPTN_DT, B.EDOC_NO, X.EMP_NM AS EMP_NM,
+                        FN_GET_DEPT_NM(B.EMP_NO) DEPT_NM, B.EDOC_TTL, B.EDOC_FORM_CLSF
+                        FROM ATRZ_RFRNC A, EDOC B,EMP X
+                        WHERE A.EMP_NO = #{empNo}
+                            AND B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+                            AND A.ATRZ_RFRNC_YN = 'N'
+                            AND B.EMP_NO = X.EMP_NO
+                            		    <include refid="Search" />
+                            ORDER BY B.EDOC_DT DESC) T
+                    )Z
+        	<![CDATA[
+              WHERE Z.RNUM >= #{startRow} AND Z.RNUM <= #{endRow}
+ 	    	]]>
+	</select>
+
+
+	<insert id="createSlsReport" parameterType="atrzLineInfoVO">
+	INSERT INTO SLS_REPORT(EDOC_NO, SLS_CTRT_NM, SLS_CNPT, SLS_YMD, SUB_CD, SLS_CORP_NO, SLS_EXT, TOTAL_SLS_AMT)
+	VALUES (#{edocVO.edocNo},#{edocVO.slsReportVO.slsCtrtNm},#{edocVO.slsReportVO.slsCnpt},#{edocVO.slsReportVO.slsYmd},'SUB0001',
+				#{edocVO.slsReportVO.slsCorpNo},#{edocVO.slsReportVO.slsExt},#{edocVO.slsReportVO.totalSlsAmt})
+	</insert>
+
+
+	<insert id="createSlsInfo" parameterType="java.util.List">
+		<selectKey resultType="String" order="BEFORE" keyProperty="slsNo">
+			SELECT NVL(SUBSTR(MAX(SLS_NO),1,8),'SLS_INFO')
+		    || TRIM(TO_CHAR(NVL(SUBSTR(MAX(SLS_NO),9),0)+1,'000'))
+			FROM SLS_INFO
+		</selectKey>
+		<foreach collection="list" item="item" index="index" open="INSERT ALL" close="SELECT * FROM DUAL" separator=" ">
+		INTO SLS_INFO(SLS_NO, EDOC_NO, SLS_GDS, SLS_QUANTITY, SLS_AMT)
+		VALUES(SUBSTR(#{slsNo},1,8) || TRIM(TO_CHAR(SUBSTR(#{slsNo},9) + (#{index}),'000')),
+		#{item.edocNo},#{item.slsGds},#{item.slsQuantity},#{item.slsAmt})
+		</foreach>
+	</insert>
+
+
+	<select id="slsDetail" parameterType="atrzLineInfoVO" resultMap="atrzLineInfoMap">
+		SELECT A.EDOC_TTL, A.EDOC_DT, A.EMP_NO, B.SLS_CTRT_NM, A.EDOC_NO, A.EDOC_FORM_CLSF, B.SLS_CNPT, B.SLS_YMD, B.SLS_CORP_NO, B.SLS_EXT, B.TOTAL_SLS_AMT, C.SLS_NO, C.SLS_GDS, C.SLS_QUANTITY, C.SLS_AMT,
+        D.ATRZ_SEQ, D.ATRZ_LINE_INFO_NO, D.EMP_NO ,D.ATRZ_DT, E.ATRZ_RFRNC_NO, E.EMP_NO, E.ATRZ_RFRNC_RCPTN_DT, G.FILE_GROUP_NO,
+        H.FILE_NO, H.FILE_ORGNL_NM, H.FILE_STRG_NM, H.FILE_STRG_ADDR, D.ATRZ_RJCT_RSN
+		FROM EDOC A, SLS_REPORT B, SLS_INFO C, ATRZ D, ATRZ_RFRNC E, FILE_GR G, FILES H
+		WHERE A.EDOC_NO = #{edocVO.edocNo}
+		    AND A.EDOC_NO = B.EDOC_NO
+		    AND B.EDOC_NO = C.EDOC_NO
+		    AND A.ATRZ_LINE_INFO_NO = D.ATRZ_LINE_INFO_NO
+		    AND A.ATRZ_LINE_INFO_NO = E.ATRZ_LINE_INFO_NO
+		    AND A.FILE_GROUP_NO = G.FILE_GROUP_NO
+		    AND G.FILE_GROUP_NO = H.FILE_GROUP_NO
+	</select>
+
+
+	<select id="getCompleteTotal" parameterType="pagingVO" resultType="int">
+	    SELECT COUNT(*)
+        FROM(
+        	SELECT A.EDOC_NO, A.EDOC_TTL, X.EMP_NM AS EMP_NM, FN_GET_DEPT_NM(A.EMP_NO) DEPT_NM, TO_CHAR(B.ATRZ_DT,'yyyy-MM-dd hh24:mm') ATRZ_DT
+		FROM EDOC A, ATRZ B, EMP X
+		WHERE B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+        AND B.EMP_NO = #{empNo}
+        AND A.EDOC_LAST_ATRZ_YN = 'Y'
+        	AND A.EMP_NO = X.EMP_NO
+        <include refid="Search" />
+        ORDER BY A.EDOC_NO DESC)
+	</select>
+
+
+	<select id="getCompleteBox" parameterType="pagingVO" resultType="hashMap" >
+        SELECT Z.*
+        FROM(SELECT ROWNUM AS RNUM, T.*
+        	FROM(SELECT A.EDOC_NO, A.EDOC_TTL, A.EDOC_FORM_CLSF, X.EMP_NM AS EMP_NM, FN_GET_DEPT_NM(A.EMP_NO) DEPT_NM,
+                    TO_CHAR(B.ATRZ_DT,'yyyy-MM-dd hh24:mi') ATRZ_DT
+                FROM EDOC A, ATRZ B, EMP X
+                WHERE B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+                AND B.EMP_NO = #{empNo}
+               AND A.EDOC_LAST_ATRZ_YN = 'Y'
+               AND A.EMP_NO = X.EMP_NO
+               <include refid="Search" />
+               ORDER BY A.EDOC_NO DESC) T
+               )Z
+             <![CDATA[
+              WHERE Z.RNUM >= #{startRow} AND Z.RNUM <= #{endRow}
+ 	    	]]>
+	</select>
+
+	<select id="getAtrzRfrncCompleteTotal" parameterType="pagingVO" resultType="int">
+		 SELECT COUNT(*)
+		FROM(SELECT A.*,B.*
+                FROM ATRZ_RFRNC A, EDOC B, EMP X
+                WHERE A.EMP_NO = #{empNo}
+                    AND B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+                    AND  A. ATRZ_RFRNC_YN = 'Y'
+                    AND B.EMP_NO = X.EMP_NO
+                    <include refid="Search" />
+                    ORDER BY B.EDOC_DT DESC) T
+	</select>
+
+	<select id="getAtrzRfrncCompleteBox" parameterType="pagingVO" resultType="hashMap">
+	     SELECT Z.*
+        FROM(SELECT ROWNUM AS RNUM, T.*
+		FROM(SELECT B.EDOC_NO, B.EDOC_TTL, B.EDOC_FORM_CLSF, X.EMP_NM AS EMP_NM, FN_GET_DEPT_NM(B.EMP_NO) DEPT_NM, TO_CHAR(A.ATRZ_RFRNC_Y_DT, 'yyyy-MM-dd hh24:mm') ATRZ_RFRNC_Y_DT
+                FROM ATRZ_RFRNC A, EDOC B, EMP X
+                WHERE A.EMP_NO = #{empNo}
+                    AND B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+                    AND  A. ATRZ_RFRNC_YN = 'Y'
+                    AND B.EMP_NO = X.EMP_NO
+                    <include refid="Search" />
+                    ORDER BY B.EDOC_DT DESC) T
+                )Z
+        	<![CDATA[
+              WHERE Z.RNUM >= #{startRow} AND Z.RNUM <= #{endRow}
+ 	    	]]>
+	</select>
+
+	<!-- 내가 기안한 문서 -->
+	<select id="getDraftingTotal" parameterType="pagingVO" resultType="int">
+	SELECT COUNT(*)
+	FROM(
+        SELECT A.EDOC_NO, A.ATRZ_LINE_INFO_NO, X.EMP_NM AS EMP_NM, FN_GET_DEPT_NM(A.EMP_NO) DEPT_NM, A.EDOC_TTL, TO_CHAR(A.EDOC_DT, 'yyyy-MM-dd hh24:mi') EDOC_DT, A.EDOC_LAST_ATRZ_YN ,A.EDOC_FORM_CLSF
+        FROM EDOC A, EMP X
+        WHERE A.EMP_NO = #{empNo}
+                    <include refid="Search" />
+             AND A.EMP_NO = X.EMP_NO
+             AND A.EDOC_LAST_ATRZ_YN = 'N'
+             ORDER BY A.EDOC_NO DESC
+             )
+	</select>
+
+	<select id="getDrafting" parameterType="pagingVO" resultType="hashMap">
+	SELECT Z.*
+    FROM(SELECT ROWNUM AS RNUM, T.*
+    FROM(SELECT A.EDOC_NO, A.ATRZ_LINE_INFO_NO, X.EMP_NM AS EMP_NM, FN_GET_DEPT_NM(A.EMP_NO) DEPT_NM, A.EDOC_TTL,
+                TO_CHAR(A.EDOC_DT, 'yyyy-MM-dd hh24:mi') EDOC_DT, A.EDOC_LAST_ATRZ_YN ,A.EDOC_FORM_CLSF
+                FROM EDOC A, EMP X
+                WHERE A.EMP_NO = #{empNo}
+                            <include refid="Search" />
+                     AND A.EMP_NO = X.EMP_NO
+                     AND A.EDOC_LAST_ATRZ_YN = 'N'
+                     ORDER BY A.EDOC_DT DESC) T
+            )Z
+        	<![CDATA[
+              WHERE Z.RNUM >= #{startRow} AND Z.RNUM <= #{endRow}
+ 	    	]]>
+	</select>
+
+	<!-- 반려처리 -->
+	<update id="rejectAtrz" parameterType="hashMap">
+	    UPDATE ATRZ
+        SET ATRZ_YN = 'Z',
+            ATRZ_DT = SYSDATE,
+            ATRZ_RJCT_RSN = #{opinion}
+        WHERE  ATRZ_LINE_INFO_NO = #{lineInfoNo} AND EMP_NO = #{empNo}
+	</update>
+
+
+	<!-- 반려문서함 -->
+	<select id="getRejectTotal" parameterType="pagingVO" resultType="int">
+	        SELECT COUNT(*)
+        FROM(SELECT A.EDOC_NO, A.ATRZ_LINE_INFO_NO, X.EMP_NM AS EMP_NM, FN_GET_DEPT_NM(A.EMP_NO) DEPT_NM,
+            A.EDOC_TTL, TO_CHAR(A.EDOC_DT, 'yyyy-MM-dd hh24:mi') EDOC_DT, A.EDOC_LAST_ATRZ_YN ,A.EDOC_FORM_CLSF
+        FROM EDOC A, EMP X
+        WHERE A.EMP_NO = #{empNo}
+                    <include refid="Search" />
+             AND A.EMP_NO = X.EMP_NO
+             AND A. EDOC_LAST_ATRZ_YN = 'Z'
+             AND A. EDOC_DEL_FL IS NULL)
+	</select>
+
+	<select id="getRejectBox" parameterType="pagingVO" resultType="hashMap">
+		    SELECT Z.*
+	        FROM(SELECT ROWNUM AS RNUM, T.*
+	        FROM(SELECT A.EDOC_NO, A.ATRZ_LINE_INFO_NO, X.EMP_NM AS EMP_NM, FN_GET_DEPT_NM(A.EMP_NO) DEPT_NM,
+	            A.EDOC_TTL, TO_CHAR(A.EDOC_DT, 'yyyy-MM-dd hh24:mi') EDOC_DT, A.EDOC_LAST_ATRZ_YN ,A.EDOC_FORM_CLSF
+	        FROM EDOC A, EMP X
+	        WHERE A.EMP_NO = #{empNo}
+	                    <include refid="Search" />
+	             AND A.EMP_NO = X.EMP_NO
+	             AND A. EDOC_LAST_ATRZ_YN = 'Z'
+	             AND A.EDOC_DEL_FL IS NULL
+	             ORDER BY A.EDOC_DT DESC) T
+	             )Z
+                       	<![CDATA[
+              WHERE Z.RNUM >= #{startRow} AND Z.RNUM <= #{endRow}
+ 	    	]]>
+	</select>
+
+
+	<!--  반려의견 가져오기 -->
+	<select id="getRjctRsn" parameterType="hashMap" resultType="hashMap">
+        SELECT B.ATRZ_RJCT_RSN
+       	 FROM EDOC A, ATRZ B
+       	 WHERE A.EMP_NO = #{empNo}
+            AND A.EDOC_NO = #{edocNo}
+             AND B.ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO
+             AND A. EDOC_LAST_ATRZ_YN = 'Z'
+             AND B.ATRZ_RJCT_RSN IS NOT NULL
+	</select>
+
+
+	<!-- 반려된 문서를 삭제하는 메서드 -->
+	<update id="deleteEdoc" parameterType="String">
+		UPDATE EDOC
+		SET EDOC_DEL_FL = 1
+		WHERE EDOC_NO = #{edocNo}
+	</update>
+
+	<!-- 결재선번호 가져오기 -->
+	<select id="getAtrzSeq" parameterType="hashMap" resultType="int">
+		SELECT ATRZ_SEQ
+		FROM ATRZ
+		WHERE ATRZ_LINE_INFO_NO=#{lineInfoNo} AND EMP_NO=#{empNo}
+	</select>
+
+	<!-- 다음결재자 여부 가져오기 -->
+	<select id="getAtrzCnt" parameterType="hashMap" resultType="int">
+		SELECT COUNT(*)
+		FROM ATRZ
+		WHERE ATRZ_LINE_INFO_NO = #{lineInfoNo} AND ATRZ_SEQ = #{atrzSeq} + 1
+	</select>
+
+	<!-- 결재할 기안서의 정보 -->
+	<select id="getEdoc" parameterType="hashMap" resultType="edocVO">
+		SELECT EDOC_NO, EMP_NO, EDOC_TTL, (SELECT ATRZ_DT FROM ATRZ WHERE ATRZ_LINE_INFO_NO=#{lineInfoNo} AND EMP_NO=#{empNo}) AS EDOC_DT
+		FROM EDOC
+		WHERE ATRZ_LINE_INFO_NO = #{lineInfoNo}
+	</select>
+
+	<!-- 다음 결재자 알림 등록 -->
+	<insert id="createAlarm" parameterType="edocVO">
+		INSERT INTO ALARM_LIST (ALARM_DT, ALARM_CLSF, ALARM_CN, ALARM_NO, EMP_NO, ALARM_LINK)
+        VALUES (#{edocDt}, '전자결재 대기', '새로운 결재대기문서 '''||#{edocTtl}||'''이(가) 있습니다.', SEQ_ALARM_LIST_NO.NEXTVAL, #{empNo}, #{edocNo})
+	</insert>
+
+	<!-- 다음결재자 사원번호 가져오기 -->
+	<select id="getEmpNO" parameterType="hashMap" resultType="string">
+		SELECT EMP_NO
+		FROM ATRZ
+		WHERE ATRZ_LINE_INFO_NO = #{lineInfoNo} AND ATRZ_SEQ = #{atrzSeq} + 1
+	</select>
+
+	<!-- 다음 결재자 알림 수신자 등록 -->
+	<insert id="createAlarmRecv" parameterType="alarmRecvVO">
+		INSERT INTO ALARM_RECV (ALARM_RECV_NO, ALARM_NO, EMP_NO, ALARM_CHK_YN)
+        VALUES (SEQ_ALARM_RECV_NO.NEXTVAL, SEQ_ALARM_LIST_NO.CURRVAL, #{empNo}, 'N')
+	</insert>
+
+
+
+	<!-- 1) 마지막 결재여부 리턴 -->
+	<select id="lastAtrzCheck" parameterType="hashMap" resultType="String">
+		SELECT NVL(T.ATRZ_YN,'N') ATRZ_YN
+		FROM (
+		    SELECT ATRZ_SEQ,ATRZ_LINE_INFO_NO, EMP_NO, ATRZ_YN, ATRZ_DT, ATRZ_RJCT_RSN, EDOC_LAST_ATRZ_YN
+		    FROM   ATRZ
+		    WHERE  ATRZ_LINE_INFO_NO = #{lineInfoNo}
+		    ORDER BY ATRZ_SEQ DESC
+		) T
+		WHERE ROWNUM = 1
+	</select>
+
+	<!-- 2) 마지막 결재여부가 'Y' 이면은 EDOC의 총결여부를 Y해줌-->
+	<update id="lastEdocY"  parameterType="hashMap">
+		UPDATE EDOC
+		SET    EDOC_LAST_ATRZ_YN = 'Y'
+		WHERE  ATRZ_LINE_INFO_NO = #{lineInfoNo}
+	</update>
+
+
+	<update id="edupdateEmpCrtHoli" parameterType="hashMap">
+UPDATE EMP T
+SET    T.EMP_CRT_HOLI =  NVL(T.EMP_CRT_HOLI,0) - (
+                SELECT NVL(B.HOLI_APLY_CNT,0)
+                FROM   EDOC A, HOLI B
+                WHERE  A.EDOC_NO = B.EDOC_NO
+                AND    A.EDOC_FORM_CLSF = 'EDOCFORM06'
+                AND    B.HOLI_CLSF = 'HOLI0001'
+                AND    A.EDOC_LAST_ATRZ_YN = 'Y'
+                AND    B.EMP_NO = T.EMP_NO
+                AND    A.EDOC_NO = (SELECT MAX(C.EDOC_NO) FROM EDOC C WHERE C.EMP_NO = T.EMP_NO AND C.EDOC_LAST_ATRZ_YN = 'Y')
+        )
+WHERE   T.EMP_NO = (SELECT V.EMP_NO FROM ATRZ V WHERE  V.ATRZ_LINE_INFO_NO = #{lineInfoNo} AND V.ATRZ_SEQ = 1)
+	</update>
+
+	<!-- 참조된 문서의 정보 가져오기 -->
+	<select id="getEdocInfo" parameterType="string" resultType="edocVO">
+		SELECT EDOC_NO, EMP_NO, EDOC_REF_NO, ATRZ_LINE_INFO_NO, FILE_GROUP_NO, EDOC_TTL, EDOC_DT, EDOC_LAST_ATRZ_YN, EDOC_FORM_CLSF, EDOC_DEL_FL
+		FROM EDOC
+		WHERE ATRZ_LINE_INFO_NO=#{atrzLineInfoNo}
+	</select>
+
+	<!-- 참조자 알림 등록 -->
+	<insert id="createRfAlarm" parameterType="edocVO">
+		INSERT INTO ALARM_LIST (ALARM_DT, ALARM_CLSF, ALARM_CN, ALARM_NO, EMP_NO, ALARM_LINK)
+        VALUES (#{edocDt}, '전자결재 참조', '새로운 결재참조문서 '''||#{edocTtl}||'''이(가) 있습니다.', SEQ_ALARM_LIST_NO.NEXTVAL, #{empNo}, #{edocNo})
+	</insert>
+
+	<!-- 참조자 알림 수신자 등록 -->
+	<insert id="createRfAlarmRecv" parameterType="string">
+		INSERT INTO ALARM_RECV (ALARM_RECV_NO, ALARM_NO, EMP_NO, ALARM_CHK_YN)
+        VALUES (SEQ_ALARM_RECV_NO.NEXTVAL, SEQ_ALARM_LIST_NO.CURRVAL, #{empNo}, 'N')
+	</insert>
+
+
+	<select id="holiDetail2" parameterType="atrzLineInfoVO" resultMap="atrzLineInfoMap">
+		SELECT A.EDOC_NO, A.ATRZ_LINE_INFO_NO, A.EMP_NO, A.EDOC_TTL, A.FILE_GROUP_NO, A.EDOC_DT,
+		A.EDOC_FORM_CLSF, B.HOLI_BGNG_YMD, B.HOLI_END_YMD, B.HOLI_APLY_CNT,
+		       B.HOLI_CN, B.HOLI_CLSF, C.ATRZ_SEQ, C.EMP_NO AS EMP_NO_ATRZ, C.ATRZ_YN, C.ATRZ_DT, C.ATRZ_RJCT_RSN, E.FILE_GROUP_NO, F.FILE_NO, F.FILE_STRG_NM, F.FILE_ORGNL_NM,  F.FILE_THUMB, F.FILE_TYPE
+		FROM EDOC A, HOLI B , ATRZ C, FILE_GR E, FILES F
+		WHERE B.EDOC_NO = A.EDOC_NO AND
+		    A. EDOC_NO =  #{edocVO.edocNo}  AND
+		     C. ATRZ_LINE_INFO_NO = A.ATRZ_LINE_INFO_NO AND
+		     E.FILE_GROUP_NO = A.FILE_GROUP_NO AND
+		     F.FILE_GROUP_NO = E.FILE_GROUP_NO
+	</select>
+
+
+	<update id="updateEdoc" parameterType="atrzLineInfoVO">
+	UPDATE EDOC
+	SET EDOC_TTL = #{edocVO.edocTtl},
+	     FILE_GROUP_NO = #{edocVO.fileGrVO.fileGroupNo},
+	    EDOC_DT = SYSDATE,
+	    EDOC_LAST_ATRZ_YN = 'N'
+	WHERE EDOC_NO = #{edocVO.edocNo} AND  EDOC_LAST_ATRZ_YN = 'Z'
+	</update>
+
+	<update id="updateDrft" parameterType="atrzLineInfoVO">
+	UPDATE DRFT
+	SET DRFT_CN = #{edocVO.dfrtVO.drftCn}
+	WHERE EDOC_NO = #{edocVO.edocNo}
+	</update>
+
+
+	<update id="updateAtrzLine" parameterType="String">
+		UPDATE ATRZ
+		SET ATRZ_YN = NULL,
+		    ATRZ_DT = NULL,
+		    EDOC_LAST_ATRZ_YN = NULL,
+		    ATRZ_RJCT_RSN = NULL
+		WHERE ATRZ_LINE_INFO_NO = #{atrzLineInfoNo}
+		    AND ATRZ_SEQ != 1
+	</update>
+
+
+	<update id="updateAtrzLineMe" parameterType="String">
+		UPDATE ATRZ
+		SET ATRZ_DT = SYSDATE
+		WHERE ATRZ_LINE_INFO_NO = #{atrzLineInfoNo}
+		    AND ATRZ_SEQ = 1
+	</update>
+
+
+	<update id="atrzRfrncY" parameterType="hashMap">
+		UPDATE ATRZ_RFRNC
+		SET ATRZ_RFRNC_YN = 'Y'
+		WHERE ATRZ_LINE_INFO_NO = #{lineInfoNo} AND EMP_NO = #{empNo}
+	</update>
+</mapper>
